@@ -19,6 +19,9 @@ let ws = undefined
 let client
 const queue = []
 
+const delayed_queue = []
+let dequeu_pid
+
 wss.on('connection', async ws_ => {
   ws = ws_
 
@@ -28,21 +31,31 @@ wss.on('connection', async ws_ => {
       return
     }
     const data = JSON.parse(message)
-    console.log(data)
+    // console.log(data)
     const admin = users.admin
     if (data.command === 'log') {
+      const message = {
+        peer: admin,
+        message: data.message,
+        randomId: Math.floor(Math.random() * 4156887774564),
+        noWebpage: true,
+      }
+      // discard after 100th unsent message
+      delayed_queue.length < 100 && delayed_queue.push(message)
+    }
+  })
+
+  clearInterval(dequeu_pid)
+  dequeu_pid = setInterval(async () => {
+    if (delayed_queue.length) {
+      const message = delayed_queue.splice(0, 1)[0]
       try {
-        const result = await client.invoke(new Api.messages.SendMessage({
-          peer: admin,
-          message: data.message,
-          randomId: Math.floor(Math.random() * 4156887774564),
-          noWebpage: true,
-        }))
+        await client.invoke(new Api.messages.SendMessage(message))
       } catch(e) {
         console.log(e)
       }
     }
-  })
+  }, 1200)
 
   await sleep(15000)
   if (queue.length) {
