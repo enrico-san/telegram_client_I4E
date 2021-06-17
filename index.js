@@ -5,7 +5,8 @@ const { Logger } = require('telegram/extensions');
 const { sleep } = require('telegram/Helpers');
 const WebSocket = require('ws');
 
-let { readCount, silence } = require(`${process.env.APP_PATH}/state.json`);
+let { readCount } = require(`${process.env.APP_PATH}/state.json`);
+let { silence } = require(`${process.env.APP_PATH}/silence.json`);
 for(let i=0; i<silence.length; i++) {
   let [h, m] = silence[i].from
   silence[i].from_sec = h*3600 + m*60
@@ -92,7 +93,7 @@ async function telegram_client() {
     }
 
     const state = await client.invoke(new Api.updates.GetState({}));
-    // console.log(state.unreadCount)
+    console.log(state.unreadCount, readCount)
     // another device has read the messages
     if (state.unreadCount < readCount) {
       readCount = 0

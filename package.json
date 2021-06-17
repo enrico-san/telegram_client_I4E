@@ -5,6 +5,7 @@
   "author": "enrico-san <enrico-san@trampolier.com>",
   "license": "MIT",
   "dependencies": {
+    "input": "^1.0.1",
     "telegram": "^1.6.11",
     "ws": "^7.4.6"
   }
