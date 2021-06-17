@@ -5,7 +5,14 @@ const { Logger } = require('telegram/extensions');
 const { sleep } = require('telegram/Helpers');
 const WebSocket = require('ws');
 
-let { readCount } = require(`${process.env.APP_PATH}/state.json`);
+let { readCount, silence } = require(`${process.env.APP_PATH}/state.json`);
+for(let i=0; i<silence.length; i++) {
+  let [h, m] = silence[i].from
+  silence[i].from_sec = h*3600 + m*60
+  let [h1, m1] = silence[i].to
+  silence[i].to_sec = h1*3600 + m1*60
+}
+
 const users = require(`${process.env.APP_PATH}/users.json`)
 
 Logger.setLevel('error');
@@ -63,11 +70,27 @@ wss.on('connection', async ws_ => {
   }
 });
 
+function silence_time() {
+  if (process.env.I4E_CAN_SHOW_MESSAGE) {
+    return false
+  }
+  const h = new Date().getHours()
+  const m = new Date().getMinutes()
+  const now = h*3600 + m*60
+  return silence.map(({from_sec, to_sec}) => now > from_sec && now < to_sec).some(_=>_)
+}
+
 async function telegram_client() {
   client = new TelegramClient(stringSession, apiId, apiHash, { connectionRetries: 5 })
   await client.start();
   
   while(true) {
+    if (silence_time()) {
+      console.log('silence')
+      await sleep(60000)
+      return
+    }
+
     const state = await client.invoke(new Api.updates.GetState({}));
     // console.log(state.unreadCount)
     // another device has read the messages
