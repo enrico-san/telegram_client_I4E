@@ -1,6 +1,6 @@
 {
   "name": "i4e_telegram_client",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "main": "index.js",
   "author": "enrico-san <enrico-san@trampolier.com>",
   "license": "MIT",
