@@ -24,7 +24,7 @@ const stringSession = new StringSession(process.env.TELEGRAM_SESSION_KIDU2);
 
 const wss = new WebSocket.Server({ port: 8081 });
 let ws = undefined
-let client
+let client, started
 const queue = []
 
 const delayed_queue = []
@@ -40,13 +40,16 @@ wss.on('connection', async ws_ => {
     const data = JSON.parse(message)
     // console.log(data)
     if (data.command === 'log') {
-      // discard after 100th unsent message
       delayed_queue.push(data.message)
     }
   })
 
   clearInterval(dequeu_pid)
   dequeu_pid = setInterval(async () => {
+    if (!started) {
+      return
+    }
+    
     if (delayed_queue.length) {
       const message = {
         peer: users.admin,
@@ -72,7 +75,7 @@ wss.on('connection', async ws_ => {
 });
 
 function silence_time() {
-  if (process.env.I4E_CAN_SHOW_MESSAGE) {
+  if (process.env.I4E_CAN_SHOW_MESSAGE === '1') {
     return false
   }
   const h = new Date().getHours()
@@ -82,20 +85,32 @@ function silence_time() {
 }
 
 async function telegram_client() {
+  console.log('wait 30 sec until networking is ready')
+  // ensure networking is ready
+  await sleep(30000)
+  
   client = new TelegramClient(stringSession, apiId, apiHash, { connectionRetries: 5 })
-  await client.start();
+  try {
+    await client.start();
+  } catch {
+    client = undefined
+    await sleep(20000)
+    setImmediate(telegram_client)
+  }
+  started = true
+  console.log('started (logged in)')
   
   while(true) {
     if (silence_time()) {
       console.log('silence')
       await sleep(60000)
-      return
+      continue
     }
 
     const state = await client.invoke(new Api.updates.GetState({}));
-    console.log(state.unreadCount, readCount)
-    // another device has read the messages
+    // console.log('unread/read', state.unreadCount, readCount)
     if (state.unreadCount < readCount) {
+      // another device has read/cleared the messages
       readCount = 0
     }
 
@@ -111,10 +126,6 @@ async function telegram_client() {
       if (!diff.newMessages) {
         continue
       }
-      
-      // for(let m of diff.newMessages) {
-      //   console.log('msg id:', m.id)
-      // }
 
       const msg_result = await client.invoke(new Api.messages.GetMessages({
         id: diff.newMessages.map(m => m.id)

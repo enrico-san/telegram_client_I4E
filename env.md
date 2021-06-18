@@ -1,0 +1,1 @@
+NODE_ENV=production ON_TARGET_MACHINE=1 I4E_CAN_SHOW_MESSAGE=0 node index.js
